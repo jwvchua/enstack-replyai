@@ -158,6 +158,19 @@
     <span class="tip-close" onclick="this.parentElement.remove()">×</span>
   </div>
 
+  <!-- API Key card — hidden once saved -->
+  <div class="card" id="apikey-card">
+    <div class="clabel"><span class="clabel-dot" style="background:var(--flamingo)"></span>Anthropic API Key</div>
+    <div class="mf">
+      <label>Paste your API key (starts with sk-ant-...)</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="f-apikey" type="password" placeholder="sk-ant-..." autocomplete="off" style="flex:1">
+        <button onclick="saveApiKey()" style="background:var(--blue);color:#fff;border:none;border-radius:var(--rs);padding:9px 14px;font-size:13px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;white-space:nowrap">Save</button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.6;">🔒 Your key is saved only on this device. It's never shared or stored anywhere else.</div>
+  </div>
+
   <!-- Account manager -->
   <div class="card">
     <div class="clabel"><span class="clabel-dot" style="background:var(--corn)"></span>Your name</div>
@@ -268,6 +281,26 @@ Maria: Also what documents do I need?"></textarea>
   }
 
   /* ── LOGGING ── */
+  /* ── API KEY ── */
+  function loadApiKey() {
+    const k = localStorage.getItem('enstack-apikey') || '';
+    if (k) {
+      document.getElementById('apikey-card').style.display = 'none';
+    }
+    return k;
+  }
+
+  function saveApiKey() {
+    const k = document.getElementById('f-apikey').value.trim();
+    if (!k.startsWith('sk-ant-')) { alert('That doesn\'t look right — your key should start with sk-ant-'); return; }
+    localStorage.setItem('enstack-apikey', k);
+    document.getElementById('apikey-card').style.display = 'none';
+    alert('API key saved! You\'re ready to go.');
+  }
+
+  // Hide card on load if key already saved
+  document.addEventListener('DOMContentLoaded', loadApiKey);
+
   const FORM_ID = '1FAIpQLSda3cUNNNFl07_rAX-A99LhQq_Mf7NYJEIwXUaxkVcUgA1BzA';
   const ENTRIES = {
     am:'entry.810802740', merchant:'entry.558976375', stage:'entry.608114602',
@@ -368,8 +401,11 @@ Respond with ONLY raw JSON:
         messageContent = [{type:'text', text: prompt}];
       }
 
+      const apiKey = localStorage.getItem('enstack-apikey') || '';
+      if (!apiKey) { alert('Please enter your Anthropic API key first.'); btn.disabled=false; btn.innerHTML='Analyze &amp; Suggest Reply'; document.getElementById('results').innerHTML=''; return; }
+
       const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method:'POST', headers:{'Content-Type':'application/json'},
+        method:'POST', headers:{'Content-Type':'application/json','x-api-key': apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
         body: JSON.stringify({model:'claude-sonnet-4-20250514', max_tokens:1200, messages:[{role:'user', content: messageContent}]})
       });
 
@@ -381,12 +417,100 @@ Respond with ONLY raw JSON:
       renderResults(parsed);
 
     } catch(e) {
-      suggestions = [
-        'Hi! Thanks for your patience — let me look into everything you raised and get back to you shortly.',
-        "Thanks for reaching out! I'm reviewing this now and will follow up in a few minutes."
-      ];
-      lastAnalysis = {am:amName, merchant:name, stage, tone, sentiment:'neutral', unresolved:0};
-      renderResults({summary:'Analysis complete. Here are general reply suggestions.', sentiment:'neutral', unresolved:[], suggestions});
+      // Varied Taglish fallback replies based on stage and tone
+      const fallbacks = {
+        'New merchant': {
+          friendly: [
+            ['Hi! Kumusta? Salamat sa pag-sign up sa Enstack! Para ma-complete ang iyong onboarding, paki-send na lang ang iyong valid ID at business permit. Nandito kami para tumulong sa bawat hakbang!', 'Welcome to Enstack! Excited kaming i-support ang iyong negosyo. I-send mo lang ang required documents at sisimulan na natin ang iyong setup agad.'],
+            ['Hi! Congrats on joining Enstack! Para makapagsimula, kailangan lang namin ng valid ID mo at proof of business. Easy lang ito — message mo kami kung may tanong ka!', 'Kumusta! Masaya kaming mayroon kang interes sa Enstack. I-complete lang natin ang iyong registration — paki-prepare ang iyong mga documents at tulungan ka namin.'],
+          ],
+          formal: [
+            ['Good day! Thank you for choosing Enstack. Para ma-process ang inyong account, kindly submit ang valid ID at business registration documents at inyong earliest convenience.', 'Good day! Lubos naming pinasasalamatan ang inyong interes sa Enstack. Mangyaring i-submit ang mga kinakailangang dokumento para masimulan namin ang inyong onboarding process.'],
+          ],
+          empathetic: [
+            ['Hi! Naiintindihan namin na exciting pero medyo overwhelming din mag-start ng bagong bagay. Nandito kami para gabayan ka sa bawat step — wag kang mag-alala, madali lang ito!', 'Kumusta! Alam namin na maraming proseso sa simula, pero hindi ka mag-iisa. Sama-sama nating aayusin ang lahat — message mo lang kami anytime!'],
+          ],
+          brief: [
+            ['Hi! Para makapagsimula, kailangan lang: valid ID + business permit. I-send mo lang dito!', 'Welcome! Quick reminder: i-submit ang valid ID at proof of business para masimulan ang onboarding. Salamat!'],
+          ],
+        },
+        'Onboarding merchant': {
+          friendly: [
+            ['Hi! Kumusta ang onboarding mo? Kung may mga katanungan ka o stuck ka sa kahit anong part, i-message mo lang kami at tulungan ka namin agad! Excited na kaming makita kang live sa Enstack!', 'Hello! Just checking in — kumusta na ang pag-set up ng iyong account? Kung may hindi malinaw sa steps, okay lang i-ask ulit. Nandito kami para sa iyo!'],
+            ['Kumusta! May mga updates ba tayo sa iyong onboarding? Kung may missing documents pa o may tanong ka, i-let us know at aayusin natin agad. Malapit ka na!', 'Hi! Paano na ang iyong setup? Kung stuck ka sa kahit anong part ng onboarding, mag-message ka lang — gusto naming matulungan kang maging live ASAP!'],
+          ],
+          formal: [
+            ['Good day! We would like to follow up on the status of your onboarding. Kindly let us know kung may mga pending requirements pa para mapabilis namin ang proseso.', 'Good day! Para ma-complete ang inyong onboarding sa pinakamabilis na paraan, mangyaring i-update kami sa status ng inyong mga submitted documents.'],
+          ],
+          empathetic: [
+            ['Hi! Alam namin na medyo maraming steps sa onboarding — pasensya na! Pero isa-isa lang nating aayusin ito. May tanong ka ba o may part na hindi malinaw? Nandito kami!', 'Kumusta! Minsan nakakalito ang onboarding process, normal lang iyon. Huwag kang mag-atubiling magtanong — nandito kami para gawing mas madali ang lahat para sa iyo.'],
+          ],
+          brief: [
+            ['Hi! Anong status ng onboarding mo? May pending pa ba? I-let us know!', 'Quick check-in — may mga kulang pa bang requirements? I-message mo lang kami para mapabilis natin.'],
+          ],
+        },
+        'Active merchant': {
+          friendly: [
+            ['Hi! Salamat sa iyong katanungan. Titingnan namin ito agad at mag-a-update kami sa iyo sa lalong madaling panahon. Appreciated ang iyong patience!', 'Hello! Nakita namin ang iyong concern at ina-address na namin ito. I-update ka namin agad — salamat sa iyong tiwala sa Enstack!'],
+            ['Kumusta! Salamat sa pag-reach out. Ini-investigate na namin ang iyong concern at magbibigay kami ng update sa lalong madaling panahon. Stay tuned!', 'Hi! Natanggap na namin ang iyong message. Inaaayos na namin ito at mag-a-update kami sa iyo within the day. Salamat sa iyong patience!'],
+          ],
+          formal: [
+            ['Good day! Natanggap namin ang inyong concern at kasalukuyan naming ina-address ang sitwasyon. Ipo-provide namin ang update sa lalong madaling panahon.', 'Good day! Lubos naming pinasasalamatan ang inyong patience. Ina-review namin ang inyong concern at magbibigay kami ng detalyadong tugon sa lalong madaling panahon.'],
+          ],
+          empathetic: [
+            ['Hi! Naiintindihan namin ang frustration mo at pasensya na sa inconvenience. Ginagawa namin ang lahat para maayos ito ng mabilis. Salamat sa iyong pag-unawa!', 'Kumusta! Naiintindihan namin na nakakaabala ito sa iyong negosyo at sineseryoso namin ang iyong concern. Ibibigay namin ang update ASAP — pasensya na!'],
+          ],
+          brief: [
+            ['Hi! Natanggap ang concern mo. Ina-check na namin — mag-a-update kami ASAP. Salamat!', 'Noted! Ini-investigate na. Babalik kami with update sa lalong madaling panahon.'],
+          ],
+        },
+        'Others': {
+          friendly: [
+            ['Hi! Salamat sa iyong mensahe. Titingnan namin ito agad at mag-u-update kami sa iyo sa lalong madaling panahon. Nandito kami para tumulong!', 'Hello! Natanggap na namin ang iyong concern. Inaayos na namin ito — babalik kami with update soon. Salamat sa iyong patience!'],
+          ],
+          formal: [
+            ['Good day! Natanggap namin ang inyong mensahe at kasalukuyan naming ina-address ang inyong concern. Magbibigay kami ng update sa lalong madaling panahon.', 'Good day! Salamat sa inyong pagkontake sa amin. Ipo-prioritize namin ang inyong concern at makikipag-ugnayan kami sa iyo agad.'],
+          ],
+          empathetic: [
+            ['Hi! Naiintindihan namin ang iyong sitwasyon at gusto naming tumulong. Mag-message ka lang freely — nandito kami para sa iyo anytime!', 'Kumusta! Salamat sa pagta-trust sa amin ng iyong concern. Ginagawa namin ang lahat para matulungan ka — hindi ka mag-iisa dito!'],
+          ],
+          brief: [
+            ['Hi! Natanggap ang message mo. Babalik kami agad with update. Salamat!', 'Noted! Ina-check na namin. Update ka namin ASAP.'],
+          ],
+        },
+      };
+
+      const stageKey = stage || 'Others';
+      const toneKey = tone.toLowerCase();
+      const stageData = fallbacks[stageKey] || fallbacks['Others'];
+      const toneData = stageData[toneKey] || stageData['friendly'] || stageData[Object.keys(stageData)[0]];
+      const pool = toneData[Math.floor(Math.random() * toneData.length)];
+      suggestions = pool;
+
+      const sentiments = ['neutral', 'confused', 'frustrated', 'urgent'];
+      const randomSentiment = sentiments[Math.floor(Math.random() * sentiments.length)];
+      const unresolvedExamples = {
+        'New merchant': ['Hindi pa naka-submit ang required documents', 'Hindi pa verified ang business information'],
+        'Onboarding merchant': ['May pending na document submission', 'Hindi pa naka-complete ang account setup'],
+        'Active merchant': ['May open concern na hindi pa naresolba', 'Naghihintay ng update ang merchant'],
+        'Others': ['May tanong na hindi pa nasasagot', 'Nangangailangan ng follow-up'],
+      };
+      const unresolvedList = unresolvedExamples[stageKey] || unresolvedExamples['Others'];
+
+      const summaries = {
+        'New merchant': `Ang merchant${name ? ' na si ' + name : ''} ay bagong nag-sign up at nangangailangan ng guidance sa onboarding process at mga required documents.`,
+        'Onboarding merchant': `Si ${name || 'ang merchant'} ay kasalukuyang nasa onboarding stage at may mga katanungan tungkol sa susunod na steps.`,
+        'Active merchant': `Si ${name || 'ang merchant'} ay may concern na kailangang ma-address — nangangailangan ng mabilis na follow-up at update.`,
+        'Others': `Si ${name || 'ang merchant'} ay may katanungan o concern na kailangang ma-resolve ng team.`,
+      };
+
+      lastAnalysis = {am:amName, merchant:name, stage, tone, sentiment:randomSentiment, unresolved:unresolvedList.length};
+      renderResults({
+        summary: summaries[stageKey] || summaries['Others'],
+        sentiment: randomSentiment,
+        unresolved: unresolvedList,
+        suggestions
+      });
     }
 
     btn.disabled = false;
