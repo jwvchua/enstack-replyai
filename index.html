@@ -145,8 +145,8 @@
     <span class="brand-sub">ReplyAI</span>
   </div>
   <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
-    <span id="theme-icon">☀️</span>
-    <span id="theme-label">Light</span>
+    <span id="theme-icon">🌙</span>
+    <span id="theme-label">Dark mode</span>
   </button>
 </div>
 
@@ -252,8 +252,8 @@ Maria: Also what documents do I need?"></textarea>
   function toggleTheme() {
     isDark = !isDark;
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-    document.getElementById('theme-icon').textContent  = isDark ? '☀️' : '🌙';
-    document.getElementById('theme-label').textContent = isDark ? 'Light' : 'Dark';
+    document.getElementById('theme-icon').textContent  = isDark ? '🌙' : '☀️';
+    document.getElementById('theme-label').textContent = isDark ? 'Dark mode' : 'Light mode';
     document.querySelector('meta[name="theme-color"]').content = isDark ? '#0d1214' : '#f2f6f9';
     localStorage.setItem('enstack-theme', isDark ? 'dark' : 'light');
   }
