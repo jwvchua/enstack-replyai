@@ -12,7 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@500;700;900&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   /* ── DARK MODE (default) ── */
-  :root, [data-theme="dark"] {
+  :root {
     --bg:#111820;--surface:#1c2530;--surface2:#243040;
     --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
     --glow:rgba(0,153,224,0.15);--glow2:rgba(0,153,224,0.28);
@@ -20,8 +20,8 @@
     --blue:#29aff0;--corn:#FFB000;--green:#0FA960;--flamingo:#FF2266;
     --r:16px;--rs:10px;
   }
-  /* ── LIGHT MODE ── */
-  [data-theme="light"] {
+  /* ── LIGHT MODE — triggered by body.light class ── */
+  body.light {
     --bg:#f2f6f9;--surface:#ffffff;--surface2:#eef3f7;
     --border:rgba(0,153,224,0.15);--border2:rgba(0,153,224,0.3);
     --glow:rgba(0,153,224,0.08);--glow2:rgba(0,153,224,0.18);
@@ -37,8 +37,8 @@
   .brand{display:flex;align-items:center;gap:10px;}
   .logo-dark{display:block;height:20px;width:auto;}
   .logo-light{display:none;height:20px;width:auto;}
-  [data-theme="light"] .logo-dark{display:none;}
-  [data-theme="light"] .logo-light{display:block;}
+  body.light .logo-dark{display:none;}
+  body.light .logo-light{display:block;}
   .brand-divider{width:1px;height:16px;background:var(--border2);flex-shrink:0;}
   .brand-sub{font-family:'Roboto',sans-serif;font-size:13px;font-weight:700;color:var(--blue);letter-spacing:.2px;opacity:1;}
 
@@ -53,7 +53,7 @@
 
   .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;transition:background .25s,border-color .25s;}
   .card{box-shadow:0 1px 3px rgba(0,0,0,0.3);}
-  [data-theme="light"] .card{box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+  body.light .card{box-shadow:0 1px 4px rgba(0,0,0,0.06);}
 
   .clabel{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text2);display:flex;align-items:center;gap:6px;margin-bottom:10px;font-family:'Inter',sans-serif;}
   .clabel-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);flex-shrink:0;}
@@ -104,7 +104,7 @@
 
   /* Results */
   .result-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;animation:fadeUp .3s ease;}
-  [data-theme="light"] .result-card{box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+  body.light .result-card{box-shadow:0 1px 4px rgba(0,0,0,0.06);}
   @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
   .rsec{padding:13px 14px;border-bottom:1px solid var(--border);}
   .rsec:last-child{border-bottom:none;}
@@ -251,16 +251,15 @@ Maria: Also what documents do I need?"></textarea>
 
   function applyTheme(dark) {
     isDark = dark;
-    const theme = dark ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', theme);
-    if (document.body) document.body.setAttribute('data-theme', theme);
+    if (document.body) {
+      if (dark) { document.body.classList.remove('light'); }
+      else       { document.body.classList.add('light'); }
+    }
     const iconEl = document.getElementById('theme-icon');
     const labelEl = document.getElementById('theme-label');
     if (iconEl) iconEl.textContent  = dark ? '🌙' : '☀️';
     if (labelEl) labelEl.textContent = dark ? 'Dark mode' : 'Light mode';
-    const metaEl = document.querySelector('meta[name="theme-color"]');
-    if (metaEl) metaEl.content = dark ? '#111820' : '#f2f6f9';
-    try { localStorage.setItem('enstack-theme', theme); } catch(e) {}
+    try { localStorage.setItem('enstack-theme', dark ? 'dark' : 'light'); } catch(e) {}
   }
 
   function toggleTheme() { applyTheme(!isDark); }
@@ -458,7 +457,7 @@ Respond with ONLY raw JSON:
         },
       };
 
-      const stageKeyt stageKey = stage || 'Others';
+      const stageKey = stage || 'Others';
       const toneKey = tone.toLowerCase();
       const stageData = fallbacks[stageKey] || fallbacks['Others'];
       const toneData = stageData[toneKey] || stageData['friendly'] || stageData[Object.keys(stageData)[0]];
