@@ -11,27 +11,26 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@500;700;900&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    /* Dark mode — lifted backgrounds, high-contrast text */
+  /* ── DARK MODE (default) ── */
+  :root, [data-theme="dark"] {
     --bg:#111820;--surface:#1c2530;--surface2:#243040;
     --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
     --glow:rgba(0,153,224,0.15);--glow2:rgba(0,153,224,0.28);
-    --text:#eef4fa;        /* near-white — primary text */
-    --text2:#b8cfe0;       /* light blue-grey — secondary text, readable */
-    --text3:#7a9ab5;       /* medium blue-grey — labels, hints */
-    --blue:#29aff0;        /* slightly brighter blue for dark bg */
-    --corn:#FFB000;--green:#0FA960;--flamingo:#FF2266;
+    --text:#eef4fa;--text2:#b8cfe0;--text3:#7a9ab5;
+    --blue:#29aff0;--corn:#FFB000;--green:#0FA960;--flamingo:#FF2266;
     --r:16px;--rs:10px;
   }
+  /* ── LIGHT MODE ── */
   [data-theme="light"] {
     --bg:#f2f6f9;--surface:#ffffff;--surface2:#eef3f7;
     --border:rgba(0,153,224,0.15);--border2:rgba(0,153,224,0.3);
     --glow:rgba(0,153,224,0.08);--glow2:rgba(0,153,224,0.18);
     --text:#0d1214;--text2:#3a5060;--text3:#7a9aaa;
-    --corn:#b37800;--green:#0a7a44;--flamingo:#cc1a50;
+    --blue:#0099E0;--corn:#b37800;--green:#0a7a44;--flamingo:#cc1a50;
+    --r:16px;--rs:10px;
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;overscroll-behavior:none;transition:background .25s,color .25s;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;overscroll-behavior:none;transition:background .3s,color .3s;}
 
   /* Header */
   .header{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--border);padding:11px 16px 10px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);transition:background .25s;}
@@ -249,15 +248,28 @@ Maria: Also what documents do I need?"></textarea>
 <script>
   /* ── THEME ── */
   let isDark = true;
-  function toggleTheme() {
-    isDark = !isDark;
-    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-    document.getElementById('theme-icon').textContent  = isDark ? '🌙' : '☀️';
-    document.getElementById('theme-label').textContent = isDark ? 'Dark mode' : 'Light mode';
-    document.querySelector('meta[name="theme-color"]').content = isDark ? '#0d1214' : '#f2f6f9';
-    localStorage.setItem('enstack-theme', isDark ? 'dark' : 'light');
+
+  function applyTheme(dark) {
+    isDark = dark;
+    const theme = dark ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    if (document.body) document.body.setAttribute('data-theme', theme);
+    const iconEl = document.getElementById('theme-icon');
+    const labelEl = document.getElementById('theme-label');
+    if (iconEl) iconEl.textContent  = dark ? '🌙' : '☀️';
+    if (labelEl) labelEl.textContent = dark ? 'Dark mode' : 'Light mode';
+    const metaEl = document.querySelector('meta[name="theme-color"]');
+    if (metaEl) metaEl.content = dark ? '#111820' : '#f2f6f9';
+    try { localStorage.setItem('enstack-theme', theme); } catch(e) {}
   }
-  if (localStorage.getItem('enstack-theme') === 'light') toggleTheme();
+
+  function toggleTheme() { applyTheme(!isDark); }
+
+  // Apply saved preference on load
+  try {
+    const savedTheme = localStorage.getItem('enstack-theme');
+    if (savedTheme === 'light') { applyTheme(false); } else { applyTheme(true); }
+  } catch(e) { applyTheme(true); }
 
   /* ── INPUT MODE ── */
   let inputMode = 'screenshot';
